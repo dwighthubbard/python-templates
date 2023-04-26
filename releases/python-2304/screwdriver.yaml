@@ -20,7 +20,7 @@ jobs:
         requires: [~pr, ~commit]
 
     publish_base_template:
-        # image: almalinux:8
+        image: centos:8
         environment:
             PYTHON_BOOTSTRAP_SKIP_PYPIRUN: True
             PYTHON_BOOTSTRAP_SKIP_SCREWDRIVERCD: False
