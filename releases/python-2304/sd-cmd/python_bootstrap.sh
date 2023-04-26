@@ -248,8 +248,8 @@ if [ ! -e "$BASE_PYTHON" ]; then
         # Try installing packages from the most recent release to the oldest
         for PY_MINOR in 11 10 9 8 7
         do
-          ${SUDO_CMD} yum install -y python3{$PY_MINOR} python3{$PY_MINOR}-devel python3{$PY_MINOR}-pip
-          if [ -e "/usr/bin/python3{$PY_MINOR}" ]; then
+          ${SUDO_CMD} yum install -y python3$PY_MINOR python3$PY_MINOR-devel python3$PY_MINOR-pip
+          if [ -e "/usr/bin/python3$PY_MINOR" ]; then
             break              #Abandon the loop.
           fi
         done
