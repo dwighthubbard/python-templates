@@ -246,8 +246,13 @@ if [ ! -e "$BASE_PYTHON" ]; then
             BASE_PYTHON_BASENAME="`basename $ORIG_BASE_PYTHON 2>/dev/null`"
         fi
         # Try installing packages from the most recent release to the oldest
-        ${SUDO_CMD} yum install -y python3 python3-devel python3-pip
-        ${SUDO_CMD} python3 -m pip install -U pip
+        for PY_MINOR in 11 10 9 8 7
+        do
+          ${SUDO_CMD} yum install -y python3{$PY_MINOR} python3{$PY_MINOR}-devel python3{$PY_MINOR}-pip
+          if [ -e "/usr/bin/python3{$PY_MINOR}" ]; then
+            break              #Abandon the loop.
+          fi
+        done
     fi
 
     $BASE_PYTHON -c "import sys;print(sys.executable)" > /dev/null 2>&1
