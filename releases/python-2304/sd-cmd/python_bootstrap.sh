@@ -290,7 +290,9 @@ if [ -e "/usr/bin/apt-get" ]; then
         if [ ! -e "/usr/bin/wget" ]; then
             ${SUDO_CMD} /usr/bin/apt-get install -y wget
         fi
-        ${SUDO_CMD} wget -O /usr/share/python-wheels/pip-9.0.1-py2.py3-none-any.whl ${PIP_PKG_URL}
+        if [ -e "/usr/share/python-wheels" ]; then
+          ${SUDO_CMD} wget -O /usr/share/python-wheels/pip-9.0.1-py2.py3-none-any.whl ${PIP_PKG_URL}
+        fi
         ${SUDO_CMD} $BASE_PYTHON -m pip install -U pip
     fi
 fi
