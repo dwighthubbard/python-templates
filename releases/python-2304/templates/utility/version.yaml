@@ -6,7 +6,7 @@ description: This job will generate a package version for all downstream jobs in
 version: 2023.4.26
 maintainer: 54983+dwighthubbard@users.noreply.github.com
 config:
-    template: python-2304/base@pre
+    template: python-2304/base@stable
     order: [ begin, motd, init_os, install_dependencies, update_version, add_screwdriver_label, end, teardown-store_artifacts]
     steps:
         - update_version:

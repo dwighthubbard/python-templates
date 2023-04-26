@@ -4,7 +4,7 @@ description: Build and publish a Python package
 version: 2023.4.1
 maintainer: 54983+dwighthubbard@users.noreply.github.com
 config:
-    template: python-2304/base@pre
+    template: python-2304/base@stable
     order: [ begin, motd, set_artifact_envs, init_os, setup_deploy_keys, install_dependencies, init, update_version, package_code, check_packages, publish, tag_release, end, teardown-store_artifacts, teardown-storemeta]
     environment:
         TWINE_REPOSITORY_URL: https://upload.pypi.org/legacy/

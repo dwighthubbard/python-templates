@@ -6,7 +6,7 @@ description: Run python code static analysis using the bandit tool
 version: 2023.4.26
 maintainer: 54983+dwighthubbard@users.noreply.github.com
 config:
-    template: python-2304/base@pre
+    template: python-2304/base@stable
     environment:
         SECURITY_CHECK_ENFORCING: 'True'
         SECURITY_REPORT_FORMAT: yaml,txt
