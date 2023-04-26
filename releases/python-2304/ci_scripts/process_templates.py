@@ -69,16 +69,16 @@ def main():
         if result.returncode != 0:
             print(f'The {args.operation} operation failed for the {template} template', flush=True)
             # return result.returncode
-            continue
+            pass
 
         if args.operation == 'publish':
             for tag in template_tags:
                 command = f'./node_modules/.bin/template-tag --name "{template_name}" --tag "{tag}"'
-                print(f'Running command: {command}')
+                print(f'Running command: {command}', flush=True)
                 try:
                     result = subprocess.run(shlex.split(command))
                 except FileNotFoundError:
-                    print(f'The {command} script was not found')
+                    print(f'The {command} script was not found', flush=True)
                     return 1
                 if result.returncode != 0:
                     print(f'The {args.operation} operation failed for the {template} template')
