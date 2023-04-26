@@ -1,0 +1,14 @@
+# Copyright 2023, Yahoo Inc.
+# Licensed under the terms of the Apache 2.0 license.  See the LICENSE file in the project root for termsnamespace: python-2304
+name: python_bootstrap
+version: '1.0'
+description: |
+    Bootstrap a Python 3.x runtime environment if one is not set up.
+usage: |
+    sd-cmd exec python-2304/python_bootstrap@<VERSION>
+    source /tmp/python_bootstrap.env
+
+maintainer: 54983+dwighthubbard@users.noreply.github.com
+format: binary # Format the command is in (binary, habitat)
+binary:
+    file: ./python_bootstrap.sh

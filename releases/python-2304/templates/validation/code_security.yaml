@@ -1,0 +1,21 @@
+# Copyright 2023, Yahoo Inc.
+# Licensed under the terms of the Apache 2.0 license.  See the LICENSE file in the project root for terms
+namespace: python-2304
+name: validate_security
+description: Run python code static analysis using the bandit tool
+version: 2023.4.26
+maintainer: 54983+dwighthubbard@users.noreply.github.com
+config:
+    template: python-2304/base@pre
+    environment:
+        SECURITY_CHECK_ENFORCING: 'True'
+        SECURITY_REPORT_FORMAT: yaml,txt
+        SECURITY_BANDIT_CONFIG_ARGS: ''
+    order: [ begin, init_os, install_dependencies, set_package_env, config_preset, update_version, bandit_config, validate, end, teardown-store_artifacts ]
+    steps:
+        - bandit_config:
+            locked: false
+            command: pypirun bandit bandit-config-generator -o .bandit.ini ${SECURITY_BANDIT_CONFIG_ARGS}
+        - validate:
+            locked: false
+            command: pypirun bandit bandit -c .bandit.ini -f txt -r ${PACKAGE_DIR}

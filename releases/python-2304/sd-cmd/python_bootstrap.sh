@@ -3,9 +3,9 @@
 # Licensed under the terms of the Apache 2.0 license.  See the LICENSE file in the project root for terms
 
 # setup_environment
-PATH=/opt/python/cp311-cp311/bin:/opt/python/cp310-cp310/bin:/opt/python/cp39-cp39/bin:/opt/python/cp38-cp38/bin:/opt/python/cp37-cp37m/bin:$PATH
+PATH=/opt/python/bin:/opt/y/1.0/bin:/opt/vz/1.0/bin:/opt/python/cp39-cp39/bin:/opt/python/cp38-cp38/bin:/opt/python/cp37-cp37m/bin:/opt/python/cp36-cp36m/bin:$PATH
 export PATH
-PIP_PKG_URL="https://files.pythonhosted.org/packages/f8/f8/17bd3f7c13515523d811ce4104410c16c03e3c6830f9276612e2f4b28382/pip-23.1.1-py3-none-any.whl"
+PIP_PKG_URL="https://files.pythonhosted.org/packages/08/e3/57d4c24a050aa0bcca46b2920bff40847db79535dc78141eb83581a52eb8/pip-23.1.2-py3-none-any.whl"
 export PIP_PKG_URL
 
 header() {
@@ -42,10 +42,14 @@ exit_if_python_version_not_supported() {
             return
         fi
 
+        if [ "$ID" = "amzn" ]; then
+            return
+        fi
+
         python_basename="$(basename $BASE_PYTHON)"
         python_version="${python_basename/python}"
-
-        if [ "$python_version" = "3" ]; then
+        echo "Checking $VERSION_ID for ${python_basename}"
+        if [ "${python_basename}" = "" ]; then
             return
         fi
 
@@ -55,21 +59,39 @@ exit_if_python_version_not_supported() {
 
         distro_maj="$(echo $VERSION_ID|cut -d. -f 1)"
         distro_minor="$(echo $VERSION_ID|cut -d. -f 2)"
+
+        # shellcheck disable=SC2034
         python_maj="$(echo $python_version|cut -d. -f 1)"
         python_minor="$(echo $python_version|cut -d. -f 2)"
-        if [ "${python_minor}" -gt "6" ]; then
-            if [ "${distro_maj}" -lt "7" ]; then
-                echo "ERROR: Python version $python_version is not supported on RHEL ${VERSION_ID}"
-                exit 1
-            fi
-            if [ "${distro_maj}" = "7" ]; then
-                if [ "${distro_minor}" -lt "7" ]; then
-                    echo "ERROR: Python version $python_version is not supported on RHEL ${VERSION_ID}"
-                    exit 1
-                fi
-            fi
+
+        if [ "${python_maj}" -lt "3" ]; then
+            return
+        fi
+
+        if [ "${distro_maj}" -gt "7" ]; then
+            return
+        fi
+
+
+        if [ "${python_minor}" -gt "8" ]; then
+            echo "ERROR: Python version $python_version is not supported on RHEL ${VERSION_ID}"
+            exit 1
         fi
     fi
+}
+
+package_script_dir() {
+    PACKAGE="$1"
+    if [ "$PACKAGE" = "" ]; then
+        PACKAGE="pip"
+    fi
+    SCRIPTDIR=$($BASE_PYTHON -c "import pip._internal.locations;print(pip._internal.locations.get_scheme('$PACKAGE').scripts)" 2>&1)
+    RC="$?"
+    if [ "$RC" != "0" ]; then
+        SCRIPTDIR="$($BASE_PYTHON -c "import sysconfig;print(sysconfig.get_paths()['scripts'])" 2>&1)"
+    fi
+    export SCRIPTDIR
+    echo $SCRIPTDIR
 }
 
 # Determine if we need sudo, if we don't need sudo we don't want to use it because some containers sudo is not set
@@ -96,7 +118,12 @@ if [ "$BASE_PYTHON" = "" ]; then
     BASE_PYTHON="python3"
 fi
 
-BINDIR="`dirname ${BASE_PYTHON} 2>/dev/null`"
+if [ "${BASE_PYTHON#*python}" = "$BASE_PYTHON" ]; then
+    echo "BASE_PYTHON is set to ${BASE_PYTHON} which appears to be invalid, setting BASE_PYTHON=python3"
+    BASE_PYTHON="python3"
+fi
+
+BINDIR=$(package_script_dir pip)
 export BINDIR
 if [ "$BINDIR" != "" ]; then
     export PATH="${BINDIR}:${PATH}"
@@ -114,9 +141,11 @@ fi
 if [ -z "$BASE_PYTHON" ]; then
     echo "BASE_PYTHON is not set, looking for a working python3 interpreter"
     # No BASE_PYTHON declared, see if there is a working python3 interpreter in the path
-    python3 -m venv --help > /dev/null 2>&1
+    # First sanity check does the interpreter venv module work
+    $BASE_PYTHON -m venv --help > /dev/null 2>&1
     RC="$?"
     if [ "$RC" = "0" ]; then
+        # It works figure out the full path to the interpreter
         BASE_PYTHON="`$BASE_PYTHON_BASENAME -c "import sys;print(sys.executable)"`"
         if [ -e "/usr/bin/readlink" ]; then
             BASE_PYTHON="`readlink ${FULL_BASE_PYTHON}`"
@@ -128,14 +157,15 @@ else
     if [ ! -e "$BASE_PYTHON" ]; then
         echo "Interpreter specified by BASE_PYTHON is not the full path, trying to use it to find the full path"
         BASE_PYTHON_BASENAME="python3"
-        FULL_BASE_PYTHON="`$BASE_PYTHON -c "import pip,sys,venv;print(sys.executable)" 2>/dev/null`"
+        # Import all the modules we need to function that are frequently disabled/broken by distros and get the full
+        # interperter path if they import.
+        FULL_BASE_PYTHON="`$BASE_PYTHON -c "import pip,os,sys,venv;print(os.path.realpath(sys.executable))" 2>/dev/null`"
+        echo $FULL_BASE_PYTHON
         RC="$?"
-        if [ "$RC" = "0" ]; then
-            echo "Working interpreter $FULL_BASE_PYTHON found"
-            BASE_PYTHON="$FULL_BASE_PYTHON"
-        else
-            echo "Interpreter $FULL_BASE_PYTHON is not functional"
-            BASE_PYTHON="python3"
+        if [ "$RC" = "0" ] && [ "${FULL_BASE_PYTHON}" != "" ]; then
+            BASE_PYTHON="`resolv_filename $FULL_BASE_PYTHON`"
+            export BASE_PYTHON
+            echo "Updated BASE_PYTHON to $BASE_PYTHON"
         fi
     fi
 fi
@@ -210,14 +240,12 @@ if [ ! -e "$BASE_PYTHON" ]; then
     fi
 
     if [ -e "/usr/bin/yum" ]; then
+        YUM_INSTALL_ARGS=""
         header "Installing CentOS/Fedora/RHEL/yLinux python"
         if [ "$ORIG_BASE_PYTHON" != "" ]; then
             BASE_PYTHON_BASENAME="`basename $ORIG_BASE_PYTHON 2>/dev/null`"
         fi
-        subheader "Python 3.x interpreter $BASE_PYTHON_BASENAME is not found"
-        ${SUDO_CMD} yum makecache fast || true
-
-        subheader "Attempting to installing redhat/fedora python3"
+        # Try installing packages from the most recent release to the oldest
         ${SUDO_CMD} yum install -y python3 python3-devel python3-pip
         ${SUDO_CMD} /usr/bin/python3 -m pip install -U pip
     fi
@@ -246,15 +274,18 @@ if [ -e "/usr/bin/apt-get" ]; then
     # interpreter.
     # This is done using wget because if the pip configuration in the base container has multiple indexes it is
     # not possible to do this with the pip command.
-    header "Replacing debian broken pip wheel package"
-    if [ ! -e "/usr/bin/wget" ]; then
-        ${SUDO_CMD} /usr/bin/apt-get install -y wget
+    if [ "${BASE_PYTHON#*opt}" = "$BASE_PYTHON" ]; then
+        header "Replacing debian broken pip wheel package"
+        if [ ! -e "/usr/bin/wget" ]; then
+            ${SUDO_CMD} /usr/bin/apt-get install -y wget
+        fi
+        ${SUDO_CMD} wget -O /usr/share/python-wheels/pip-9.0.1-py2.py3-none-any.whl ${PIP_PKG_URL}
+        ${SUDO_CMD} $BASE_PYTHON -m pip install -U pip
     fi
-    ${SUDO_CMD} wget -O /usr/share/python-wheels/pip-9.0.1-py2.py3-none-any.whl ${PIP_PKG_URL}
-    ${SUDO_CMD} $BASE_PYTHON -m pip install -U pip
 fi
 
-BINDIR="`dirname ${BASE_PYTHON} 2>/dev/null`"
+# BINDIR="`dirname ${BASE_PYTHON} 2>/dev/null`"
+BINDIR=$(package_script_dir pip)
 export BINDIR
 if [ "$BINDIR" != "" ]; then
     if [ "$BINDIR" != "." ]; then
@@ -290,11 +321,30 @@ fi
 
 if [ "$(echo $PYTHON_BOOTSTRAP_SKIP_SCREWDRIVERCD|tr '[:upper:]' '[:lower:]')" != "true" ]; then
     # install_screwdrivercd
-    $BASE_PYTHON -c "import screwdrivercd.utility" >/dev/null 2>&1
+    # $BASE_PYTHON -c "import screwdrivercd.utility" >/dev/null 2>&1
+    $BASE_PYTHON <<EOF
+import os,shutil,sys
+sdscript = shutil.which('screwdrivercd_validate_type')
+if not sdscript:
+    sys.exit(1)
+hashbang_script = open(sdscript).readlines()[0].strip()[2:].strip()
+base_python = os.environ.get('BASE_PYTHON', hashbang_script)
+if base_python == hashbang_script:
+    sys.exit(0)
+else:
+    print(f'The screwdrivercd scripts #!{hashbang_script} doesn\'t match #!{base_python}')
+sys.exit(2)
+EOF
     RC="$?"
     if [ "$RC" != "0" ]; then
         header "Installing screwdrivercd into interpreter $BASE_PYTHON"
-        ${SUDO_CMD} $BASE_PYTHON -m pip install -U --force-reinstall screwdrivercd
+        # On alpine new versions of pip won't install six as a screwdrivercd dependency because six uses distutils
+        # so we have to install six before installing screwdrivercd
+        if [ -e "/sbin/apk" ]; then
+            ${SUDO_CMD} $BASE_PYTHON -m pip install -U screwdrivercd --ignore-installed six
+        else
+            ${SUDO_CMD} $BASE_PYTHON -m pip install -U screwdrivercd
+        fi
     fi
 fi
 
@@ -310,11 +360,14 @@ if [ -e "/sbin/apk" ]; then
     fi
 fi
 
+BASE_PYTHON_PREFIX="$($BASE_PYTHON -c "import sys;print(sys.prefix)")"
+
 cat << EOF > /tmp/python_bootstrap.env
 # Created by python_bootstrap sd-cmd
 BINDIR="$BINDIR"
 BASE_PYTHON="$BASE_PYTHON"
 BASE_PYTHON_BIN="$BASE_PYTHON_BIN"
+BASE_PYTHON_PREFIX="$BASE_PYTHON_PREFIX"
 PIP_CMD="$BASE_PYTHON -m pip"
 PATH="${BASE_PYTHON_BIN}:\$PATH:/opt/vz/1.0/bin:/opt/python/bin:${HOME}/.local/bin"
 EOF
@@ -328,6 +381,7 @@ fi
 cat << EOF >> /tmp/python_bootstrap.env
 export BASE_PYTHON
 export BASE_PYTHON_BIN
+export BASE_PYTHON_PREFIX
 export PIP_CMD
 export PATH
 EOF
@@ -338,12 +392,23 @@ export CRYPTOGRAPHY_DONT_BUILD_RUST
 EOF
 fi
 
+if [ "${SD_ARTIFACTS_DIR}" = "" ]; then
+    SD_ARTIFACTS_DIR="artifacts"
+fi
 
 ART_DIR="${SD_ARTIFACTS_DIR}/env"
+CONF_DIR="${SD_ARTIFACTS_DIR}/config"
+
 if [ ! -e "${ART_DIR}" ]; then
-    mkdir "${ART_DIR}"
+    mkdir -p "${ART_DIR}"
 fi
+
+if [ ! -e "${CONF_DIR}" ]; then
+    mkdir -p "${CONF_DIR}"
+fi
+
 cp /tmp/python_bootstrap.env "${ART_DIR}/python_bootstrap.env"
+$BASE_PYTHON -m pip freeze > "${CONF_DIR}/python_bootstrap_requirements.txt"
 
 header Python bootstrap complete
 echo "The installed environment configuration can be activated by running:"
@@ -351,6 +416,7 @@ echo "    source /tmp/python_bootstrap.env"
 echo
 echo "Python interpreter and PIP commands bootstrapped are in the BASE_PYTHON and BASE_PYTHON_PIP environment variables"
 echo "    BASE_PYTHON=$BASE_PYTHON"
+echo "    BASE_PYTHON_PREFIX=$BASE_PYTHON_PREFIX"
 echo "    BASE_PYTHON_BIN=$BASE_PYTHON_BIN"
 echo "    PIP_CMD=$BASE_PYTHON -m pip"
 if [ "$CRYPTOGRAPHY_DONT_BUILD_RUST" != "" ]; then

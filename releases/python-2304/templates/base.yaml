@@ -1,0 +1,109 @@
+namespace: python-2304
+name: base
+version: 2023.4.1
+description: 'Base template definition for python-2304 namespace templates'
+maintainer: 54983+dwighthubbard@users.noreply.github.com
+images:
+    manylinux2014: quay.io/pypa/manylinux2014_x86_64
+    manylinux2010: quay.io/pypa/manylinux2010_x86_64
+    manylinux1_32: quay.io/pypa/manylinux1_i686
+    manylinux1_64: quay.io/pypa/manylinux1_x86_64
+    alma8: almalinux:8
+    alma9: almalinux:9
+    ubuntu1804: ubuntu:18.04
+    ubuntu2004: ubuntu:20.04
+    ubuntu2204: ubuntu:22.04
+    ubuntu: ubuntu:latest
+config:
+    image: alma8
+    environment:
+        BASE_PYTHON: python3
+        LANG: en_US.UTF-8
+        SCREWDRIVER_CONFIG_PRESET: python-2304
+        SD_COVERAGE_PLUGIN_ENABLED: 'false'
+    steps:
+        - begin: echo "Starting ${SD_TEMPLATE_FULLNAME}"
+        - motd: echo "Message of the day goes here"
+        - read_os_release: |
+            if [ -e "/etc/os-release" ]; then
+                source /etc/os-release
+            fi
+            IFS=".";read -a VERSION_INFO <<< "$VERSION_ID";unset IFS
+            export ID
+            export VERSION_INFO
+        - set_os_release: |
+            if [ -z ${OS_RELEASE} ]; then
+                OS_RELEASE="`rpm -q --qf '%{version}' -f /etc/redhat-release|cut -d. -f1`"
+            else
+                echo -n "Found redhat release "
+                rpm -q --qf '%{version}' -f /etc/redhat-release|cut -d. -f1
+            fi
+            if [ "$OS_RELEASE" = "" ]; then
+                OS_RELEASE="${VERSION_INFO[0]}"
+            fi
+            export OS_RELEASE
+            echo "OS_RELEASE=$OS_RELEASE"
+        - set_platform: |
+            PLATFORM="$(uname -m)"
+            export PLATFORM
+        - set_artifact_envs: |
+            LOGIR="${SD_ARTIFACTS_DIR}/logs"
+            export LOGDIR
+        - install_sudo: |
+            yum install -y sudo || true
+        - init_os: |
+            sd-cmd exec python-2304/python_bootstrap@latest
+            . /tmp/python_bootstrap.env||/bin/true
+        - setup_deploy_keys: |
+            if [ ! -z "$GIT_DEPLOY_KEY" ]; then
+                screwdrivercd_ssh_setup
+                eval "$(ssh-agent -s)"
+                screwdrivercd_github_deploykey
+            fi
+        - install_dependencies: screwdrivercd_install_deps
+        - determine_git_repo: |
+            determine_repo() {
+                git_remote_url="`git remote -v|grep ^origin|grep "(push)\$"|awk '{print $2}'`"
+                case "$git_remote_url" in
+                    *git@* ) export GIT_REPO="`echo $git_remote_url|cut -d":" -f 2|sed "s/\.git//"`";;
+                    *http* ) export GIT_REPO="`echo $git_remote_url|cut -d"/" -f 4-5|sed "s/\.git//"`";;
+                esac
+            }
+
+            if [ "$GIT_REPO" = "" ]; then
+                determine_repo
+                echo "Git repo has been set to $GIT_REPO"
+            fi
+        - init: echo "Add presets"
+        - update_version: |
+            if [ ! -e "setup.cfg" ]; then
+                cat << EOF > setup.cfg
+            [metadata]
+            version=0.0.0
+            [screwdrivercd.version]
+            version_type = sdv4_date
+            EOF
+                screwdrivercd_version --update_meta
+                rm setup.cfg
+            else
+                screwdrivercd_version
+            fi
+            export PACKAGE_VERSION="`meta get package.version`"
+        - end: echo "Ending ${SD_TEMPLATE_FULLNAME}"
+        - teardown-storemeta: |
+            if [ ! -e "$SD_ARTIFACTS_DIR/config" ]; then
+                mkdir -p "$SD_ARTIFACTS_DIR/config" || true
+            fi
+            cp $SD_META_PATH $SD_ARTIFACTS_DIR/config || true
+            cat $SD_META_PATH
+        - teardown-meta_debug: |
+            if [ -e "$BASE_PYTHON" ]; then
+                $BASE_PYTHON << EOF
+            import json, subprocess
+            metadata = json.loads(subprocess.check_output(['meta', 'dump']))
+            print(json.dumps(metadata, indent=4, sort_keys=True))
+            EOF
+            else
+                meta dump
+            fi
+            meta --help

@@ -1,0 +1,15 @@
+namespace: python-2304
+name: pypirun
+version: '1.0'
+description: |
+  Run a command line utility from inside a python package without python having to be
+  installed first.
+usage: |
+  sd-cmd exec python-2304/pypirun@<VERSION> <PACKAGE> <COMMAND>
+
+  Package: Python package containing the command
+  Command: Command to run
+maintainer: 54983+dwighthubbard@users.noreply.github.com
+format: binary
+binary:
+    file: ./pypirun.sh
