@@ -254,7 +254,8 @@ if [ ! -e "$BASE_PYTHON" ]; then
         for PY_MINOR in ${PY_MINORS}
         do
           ${SUDO_CMD} yum install -y python3$PY_MINOR python3$PY_MINOR-devel python3$PY_MINOR-pip
-          if [ -e "/usr/bin/python3$PY_MINOR" ]; then
+          if [ -e "/usr/bin/python3.$PY_MINOR" ]; then
+            BASE_PYTHON="/usr/bin/python3.$PY_MINOR"
             break              #Abandon the loop.
           fi
         done
