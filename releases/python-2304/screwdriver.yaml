@@ -2,7 +2,7 @@ shared:
     environment:
         PYTHON_BOOTSTRAP_SKIP_PYPIRUN: 'True'
         PYTHON_BOOTSTRAP_SKIP_SCREWDRIVERCD: 'True'
-    image: node:6
+    image: node:14
 
 jobs:
     publish_cmd:
