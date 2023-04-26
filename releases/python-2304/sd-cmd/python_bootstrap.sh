@@ -247,7 +247,7 @@ if [ ! -e "$BASE_PYTHON" ]; then
         fi
         # Try installing packages from the most recent release to the oldest
         ${SUDO_CMD} yum install -y python3 python3-devel python3-pip
-        ${SUDO_CMD} /usr/bin/python3 -m pip install -U pip
+        ${SUDO_CMD} python3 -m pip install -U pip
     fi
 
     $BASE_PYTHON -c "import sys;print(sys.executable)" > /dev/null 2>&1
