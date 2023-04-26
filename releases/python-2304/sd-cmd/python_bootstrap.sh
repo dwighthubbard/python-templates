@@ -246,12 +246,12 @@ if [ ! -e "$BASE_PYTHON" ]; then
             BASE_PYTHON_BASENAME="`basename $ORIG_BASE_PYTHON 2>/dev/null`"
         fi
         # Try installing packages from the most recent release to the oldest
-        PY_MINORS = "11 10 9 8 7"
+        PY_MINORS="11 10 9 8 7"
         if [ "$ORIG_BASE_PYTHON" != "python3" ]; then
             python_minor="$(echo $python_version|cut -d. -f 2)"
             PY_MINORS="$python_minor"
         fi
-        for PY_MINOR in $PY_MINORS
+        for PY_MINOR in ${PY_MINORS}
         do
           ${SUDO_CMD} yum install -y python3$PY_MINOR python3$PY_MINOR-devel python3$PY_MINOR-pip
           if [ -e "/usr/bin/python3$PY_MINOR" ]; then
