@@ -184,6 +184,12 @@ if [ ! -e "$BASE_PYTHON" ]; then
 
         subheader "Installing ${PYTHON} ${PYTHON}-venv ${PYTHON}-pip python3-venv python3-pip"
         ${SUDO_CMD} apt-get install -y ${PYTHON} ${PYTHON}-venv ${PYTHON}-pip python3-venv python3-pip
+
+        /usr/bin/python3 -c "import pip" > /dev/null 2>&1;RC="$?"
+        if [ "$RC" != "0" ]; then
+            echo "Working Python interpreter not found"
+            exit 1
+        fi
     fi
 
     if [ -e "/sbin/apk" ]; then
