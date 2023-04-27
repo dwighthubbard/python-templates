@@ -50,7 +50,7 @@ def main():
     template_tags = template_tag.split(',')
 
     for template in determine_template_file_list():
-        os.environ['SD_TEMPLATE_PATH'] = str(Path('.') / template)
+        os.environ['SD_TEMPLATE_PATH'] = f'./{template}'
 
         print(f'Processing template: {str(template)}')
         template_namespace = template_value("namespace", filename=template)
