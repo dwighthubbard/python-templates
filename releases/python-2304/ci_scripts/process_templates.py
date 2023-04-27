@@ -69,6 +69,8 @@ def main():
         except FileNotFoundError:
             print(f'The {command} script was not found', flush=True)
             return 1
+        sys.stdout.flush()
+        sys.stderr.flush()
         if result.returncode != 0:
             print(f'The {args.operation} operation failed for the {template} template', flush=True)
             # return result.returncode
