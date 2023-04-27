@@ -60,7 +60,7 @@ def main():
         if args.operation == 'validate':
             command = './node_modules/.bin/template-validate'
 
-        print(f'Processing Template: {template_name} Running: {command}', flush=True)
+        print(f'Processing Template: {template_name} SD_TEMPLATE_PATH={os.environ["SD_TEMPLATE_PATH"]} Running: {command}', flush=True)
         try:
             result = subprocess.run(shlex.split(command))
         except FileNotFoundError:
