@@ -51,6 +51,9 @@ def main():
 
     for template in determine_template_file_list():
         os.environ['SD_TEMPLATE_PATH'] = str(template)
+        if not str(template).startswith('/'):
+            os.environ['SD_TEMPLATE_PATH'] = str(Path('.') / Path(template))
+
         print(f'Processing template: {str(template)}')
         template_namespace = template_value("namespace", filename=template)
         template_name = f'{template_namespace}/{template_value("name", filename=template)}'
