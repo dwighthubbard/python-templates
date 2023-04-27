@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# Copyright 2021, Oath Inc.
-# Licensed under the terms of the Apache 2.0 license.  See the LICENSE file in the project root for terms
 import argparse
 import os
 from pathlib import Path
@@ -11,9 +9,7 @@ import sys
 
 def template_value(key, filename=None):
     if not filename:
-        filename = os.environ.get('SD_TEMPLATE_PATH', None)
-        if not filename:
-            return
+        filename = os.environ['SD_TEMPLATE_PATH']
 
     with open(filename) as handle:
         for line in handle.readlines():
@@ -41,51 +37,61 @@ def determine_template_file_list():
     return templates
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('operation', default='validate', choices=['validate', 'publish'])
-    args = parser.parse_args()
+class TemplateTagError(Exception):
+    """Template tag operation exception"""
 
-    template_tag = os.environ.get('TEMPLATE_TAG', 'pre')
-    template_tags = template_tag.split(',')
 
-    for template in determine_template_file_list():
-        os.environ['SD_TEMPLATE_PATH'] = f'./{template}'
+def tag_template(template, tag='pre'):
+    command = f'./node_modules/.bin/template-tag --name {template} --tag {tag}'
+    try:
+        result = subprocess.run(shlex.split(command))
+    except FileNotFoundError:
+        print(f'The {command} script was not found')
+        return 1
+    if result.returncode != 0:
+        raise TemplateTagError(f'The tag operation failed for the {os.environ["SD_TEMPLATE_PATH"]} template')
 
-        print(f'Processing template: {str(template)}')
-        template_namespace = template_value("namespace", filename=template)
-        template_name = f'{template_namespace}/{template_value("name", filename=template)}'
-        command = './node_modules/.bin/template-validate'
-        if args.operation == 'publish':
-            command = './node_modules/.bin/template-publish'
-        if args.operation == 'validate':
-            command = './node_modules/.bin/template-validate'
 
-        print(f'Processing Template: {template_name} SD_TEMPLATE_PATH={os.environ["SD_TEMPLATE_PATH"]} Running: {command}', flush=True)
+def process_template(template_name, operation):
+    command = './node_modules/.bin/template-validate'
+    if operation == 'publish':
+        command = './node_modules/.bin/template-publish'
+
+    if operation in ['validate', 'publish']:
+        print(f'Processing Template: {template_name} Running: {command}')
         try:
             result = subprocess.run(shlex.split(command))
         except FileNotFoundError:
-            print(f'The {command} script was not found', flush=True)
+            print(f'The {command} script was not found')
             return 1
-        sys.stdout.flush()
-        sys.stderr.flush()
         if result.returncode != 0:
-            print(f'The {args.operation} operation failed for the {template} template', flush=True)
-            # return result.returncode
-            pass
+            print(f'The {operation} operation failed for the {os.environ["SD_TEMPLATE_PATH"]} template')
+            return result.returncode
 
-        if args.operation == 'publish':
-            for tag in template_tags:
-                command = f'./node_modules/.bin/template-tag --name "{template_name}" --tag "{tag}"'
-                print(f'Running command: {command}', flush=True)
-                try:
-                    result = subprocess.run(shlex.split(command))
-                except FileNotFoundError:
-                    print(f'The {command} script was not found', flush=True)
-                    return 1
-                if result.returncode != 0:
-                    print(f'The {args.operation} operation failed for the {template} template')
-                    return result.returncode
+    if operation == 'publish':
+        tag_template(template=template_name, tag='pre')
+    elif operation == 'promote_latest':
+        tag_template(template=template_name, tag='latest')
+    elif operation == 'promote_stable':
+        tag_template(template=template_name, tag='stable')
+
+    return 0
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('operation', default='validate', choices=['validate', 'publish', 'promote_latest', 'promote_stable'])
+    args = parser.parse_args()
+
+    for template in determine_template_file_list():
+        os.environ['SD_TEMPLATE_PATH'] = str(template)
+        print(f'Processing template: {os.environ["SD_TEMPLATE_PATH"]}')
+        template_name = f'python-2304/{template_value("name")}'
+
+        rc = process_template(template_name, args.operation)
+        if rc != 0:
+            return rc
+
         print('', flush=True)
     return 0
 

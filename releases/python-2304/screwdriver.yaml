@@ -27,7 +27,7 @@ jobs:
             TEMPLATE_DIR: templates
             TEMPLATE_TAG: stable
             TEMPLATES_BASE: base.yaml
-            TEMPLATES: packaging, utility, validation
+            TEMPLATES: base.yaml, packaging, utility, validation
         steps:
             - init_os: |
                 sd-cmd python-2304/python_bootstrap@stable
@@ -37,9 +37,9 @@ jobs:
             - set_base_templates: |
                 ORIG_TEMPLATES="$TEMPLATES"
                 TEMPLATES="$TEMPLATES_BASE"
-            - validate_base: $BASE_PYTHON ci_scripts/process_templates.py validate
-            - publish_base: $BASE_PYTHON ci_scripts/process_templates.py publish
+            - validate_base: $BASE_PYTHON ci_scripts/process_templates_bad.py validate
+            - publish_base: $BASE_PYTHON ci_scripts/process_templates_bad.py publish
             - set_templates: TEMPLATES="$ORIG_TEMPLATES"
-            - validate: $BASE_PYTHON ci_scripts/process_templates.py validate
-            - publish: $BASE_PYTHON ci_scripts/process_templates.py publish
+            - validate: $BASE_PYTHON ci_scripts/process_templates_bad.py validate
+            - publish: $BASE_PYTHON ci_scripts/process_templates_bad.py publish
         requires: [publish_cmd]
