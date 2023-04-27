@@ -58,14 +58,14 @@ def process_template(template_name, operation):
         command = './node_modules/.bin/template-publish'
 
     if operation in ['validate', 'publish']:
-        print(f'Processing Template: {template_name} Running: {command}')
+        print(f'Processing Template: {template_name} Running: {command}', flush=True)
         try:
             result = subprocess.run(shlex.split(command))
         except FileNotFoundError:
             print(f'The {command} script was not found')
             return 1
         if result.returncode != 0:
-            print(f'The {operation} operation failed for the {os.environ["SD_TEMPLATE_PATH"]} template')
+            print(f'The {operation} operation failed for the {os.environ["SD_TEMPLATE_PATH"]} template', flush=True)
             return result.returncode
 
     if operation == 'publish':

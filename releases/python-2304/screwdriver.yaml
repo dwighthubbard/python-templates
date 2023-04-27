@@ -37,9 +37,9 @@ jobs:
             - set_base_templates: |
                 ORIG_TEMPLATES="$TEMPLATES"
                 TEMPLATES="$TEMPLATES_BASE"
-            - validate_base: $BASE_PYTHON ci_scripts/process_templates_bad.py validate
-            - publish_base: $BASE_PYTHON ci_scripts/process_templates_bad.py publish
+            - validate_base: $BASE_PYTHON ci_scripts/process_templates.py validate
+            - publish_base: $BASE_PYTHON ci_scripts/process_templates.py publish
             - set_templates: TEMPLATES="$ORIG_TEMPLATES"
-            - validate: $BASE_PYTHON ci_scripts/process_templates_bad.py validate
-            - publish: $BASE_PYTHON ci_scripts/process_templates_bad.py publish
+            - validate: $BASE_PYTHON ci_scripts/process_templates.py validate
+            - publish: $BASE_PYTHON ci_scripts/process_templates.py publish
         requires: [publish_cmd]
