@@ -35,11 +35,12 @@ jobs:
                 for cmd in $(ls -1 sd-cmd/*.yaml|cut -d/ -f2|cut -d. -f1)
                 do
                     echo "validate python-2304/${cmd}: "
-                    sd-cmd exec python-2304/${cmd}@pre > $SD_ARTIFACTS_DIR/logs/sd-cmd-validate/${cmd}.log 2>&1
+                    sd-cmd exec python-2304/${cmd}@pre 2>&1 | tee $SD_ARTIFACTS_DIR/logs/sd-cmd-validate/${cmd}.log
                     echo
                 done
                 sd-cmd exec python-2304/pypirun@pre serviceping serviceping --help
             - promote: |
+                mkdir -p $SD_ARTIFACTS_DIR/logs/sd-cmd-promote
                 for cmd in $(ls -1 sd-cmd/*.yaml|cut -d/ -f2|cut -d. -f1)
                 do
                     echo "promote ${cmd}: "
@@ -71,4 +72,4 @@ jobs:
             - set_templates: TEMPLATES="$ORIG_TEMPLATES"
             - validate: $BASE_PYTHON ci_scripts/process_templates.py validate
             - publish: $BASE_PYTHON ci_scripts/process_templates.py publish
-        requires: [publish_cmd]
+        requires: [promote_cmd]
