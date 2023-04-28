@@ -1,6 +1,15 @@
 #!/bin/bash
-# Copyright 2021, Oath Inc.
+# Copyright 2023, Yahoo Inc.
 # Licensed under the terms of the Apache 2.0 license.  See the LICENSE file in the project root for terms
+
+# Bootstrap python
+if [ ! -e "$BASE_PYTHON" ]; then
+    if [ "PYTHON_BOOTSTRAP_SKIP_SCREWDRIVERCD" = "" ]; then
+        PYTHON_BOOTSTRAP_SKIP_SCREWDRIVERCD="True"
+    fi
+    sd-cmd exec python-2304/python_bootstrap@latest
+    . /tmp/python_bootstrap.env
+fi
 
 export LOGDIR="$SD_ARTIFACTS_DIR/logs/sd-cmd"
 export LOGFILE="$LOGDIR/installdeps.log"

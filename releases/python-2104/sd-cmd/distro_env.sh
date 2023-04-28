@@ -4,6 +4,15 @@
 
 set -e
 
+# Bootstrap python
+if [ ! -e "$BASE_PYTHON" ]; then
+    if [ "PYTHON_BOOTSTRAP_SKIP_SCREWDRIVERCD" = "" ]; then
+        PYTHON_BOOTSTRAP_SKIP_SCREWDRIVERCD="True"
+    fi
+    sd-cmd exec python-2304/python_bootstrap@latest
+    . /tmp/python_bootstrap.env
+fi
+
 if [ "${SD_ARTIFACTS_DIR}" = "" ]; then
     SD_ARTIFACTS_DIR="artifacts"
 fi

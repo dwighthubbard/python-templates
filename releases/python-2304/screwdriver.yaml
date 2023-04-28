@@ -38,7 +38,6 @@ jobs:
                     sd-cmd exec python-2304/${cmd}@pre 2>&1 | tee $SD_ARTIFACTS_DIR/logs/sd-cmd-validate/${cmd}.log
                     echo
                 done
-                sd-cmd exec python-2304/pypirun@pre serviceping serviceping --help
             - promote: |
                 mkdir -p $SD_ARTIFACTS_DIR/logs/sd-cmd-promote
                 for cmd in $(ls -1 sd-cmd/*.yaml|cut -d/ -f2|cut -d. -f1)

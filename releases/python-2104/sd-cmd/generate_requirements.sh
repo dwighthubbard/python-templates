@@ -3,9 +3,13 @@
 # Licensed under the terms of the Apache 2.0 license.  See the LICENSE file in the project root for terms
 
 # Bootstrap python
-export PYTHON_BOOTSTRAP_SKIP_SCREWDRIVERCD="True"
-sd-cmd exec python-2104/python_bootstrap@pre
-. /tmp/python_bootstrap.env
+if [ ! -e "$BASE_PYTHON" ]; then
+    if [ "PYTHON_BOOTSTRAP_SKIP_SCREWDRIVERCD" = "" ]; then
+        PYTHON_BOOTSTRAP_SKIP_SCREWDRIVERCD="True"
+    fi
+    sd-cmd exec python-2304/python_bootstrap@latest
+    . /tmp/python_bootstrap.env
+fi
 
 if [ "${GEN_REQUIREMENTS_SRC_FILES}" = "" ]; then
     if [ -e "requirements.in" ]; then
