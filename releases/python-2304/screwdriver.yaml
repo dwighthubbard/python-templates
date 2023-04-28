@@ -2,22 +2,55 @@ shared:
     environment:
         PYTHON_BOOTSTRAP_SKIP_PYPIRUN: 'True'
         PYTHON_BOOTSTRAP_SKIP_SCREWDRIVERCD: 'True'
-    image: node:14
+    image: almalinux:8
 
 jobs:
     publish_cmd:
         steps:
-            -   validate_bootstrap: sd-cmd validate -f sd-cmd/python_bootstrap.yaml
-            -   validate_distro_env: sd-cmd validate -f sd-cmd/distro_env.yaml
-            -   validate_generate_requirements: sd-cmd validate -f sd-cmd/generate_requirements.yaml
-            -   validate_pypirun: sd-cmd validate -f sd-cmd/pypirun.yaml
-            -   validate_installdeps: sd-cmd validate -f sd-cmd/installdeps.yaml
-            -   publish_bootstrap: sd-cmd publish -f sd-cmd/python_bootstrap.yaml -t stable
-            -   publish_distro_env: sd-cmd publish -f sd-cmd/distro_env.yaml -t stable
-            -   publish_generate_requirements: sd-cmd publish -f sd-cmd/generate_requirements.yaml -t stable
-            -   publish_pypirun: sd-cmd publish -f sd-cmd/pypirun.yaml -t stable
-            -   publish_installdeps: sd-cmd publish -f sd-cmd/installdeps.yaml -t stable
+            - validate: |
+                for cmd in $(ls -1 sd-cmd/*.sh)
+                do
+                    echo -n "${cmd}: "
+                    sd-cmd validate -f "sd-cmd/${cmd}.yaml"
+                    echo
+                done
+            - publish: |
+                tag="pre"
+                if [ ! -z $SD_PULL_REQUEST ] ; then
+                    tag="pr$SD_PULL_REQUEST"
+                else
+                    for cmd in $(ls -1 sd-cmd/*.sh)
+                    do
+                        echo -n "${cmd}: "
+                        sd-cmd publish -f "sd-cmd/${cmd}.yaml" -t $tag
+                        echo
+                    done
+                fi
         requires: [~pr, ~commit]
+
+    promote_cmd:
+        steps:
+            - validate: |
+                mkdir -p $SD_ARTIFACTS_DIR/logs/sd-cmd-validate
+                for cmd in $(ls -1 sd-cmd/*.sh)
+                do
+                    echo "validate ${cmd}: "
+                    sd-cmd exec python-2304/${cmd}@pre > $SD_ARTIFACTS_DIR/logs/sd-cmd-validate/${cmd}.log 2>&1
+                    echo
+                done
+                sd-cmd exec python-2304/pypirun@pre serviceping serviceping --help
+                sd-cmd exec python-2304/remoterun@pre https://edge.dist.yahoo.com:4443/artifactory/bootstrap/motd/motd-0.0.25508114
+            - promote: |
+                for cmd in $(ls -1 sd-cmd/*.sh)
+                do
+                    echo "promote ${cmd}: "
+                    sd-cmd publish -f "sd-cmd/${cmd}.yaml" -t latest
+                    sd-cmd publish -f "sd-cmd/${cmd}.yaml" -t stable
+                    # sd-cmd promote python-2304/${cmd} pre latest
+                    # sd-cmd promote python-2304/${cmd} pre stable
+                  echo
+                done
+        requires: [publish_cmd]
 
     publish_base_template:
         image: almalinux:8

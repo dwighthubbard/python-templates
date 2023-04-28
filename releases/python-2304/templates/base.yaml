@@ -1,6 +1,6 @@
 namespace: python-2304
 name: base
-version: 2023.4.1
+version: 2023.4.28
 description: 'Base template definition for python-2304 namespace templates'
 maintainer: 54983+dwighthubbard@users.noreply.github.com
 images:
