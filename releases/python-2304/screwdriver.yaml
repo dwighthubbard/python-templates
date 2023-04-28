@@ -8,10 +8,10 @@ jobs:
     publish_cmd:
         steps:
             - validate: |
-                for cmd in $(ls -1 sd-cmd/*.sh)
+                for cmd_filename in $(ls -1 sd-cmd/*.yaml)
                 do
-                    echo -n "${cmd}: "
-                    sd-cmd validate -f "sd-cmd/${cmd}.yaml"
+                    echo -n "${cmd_filename}: "
+                    sd-cmd validate -f "${cmd_filename}"
                     echo
                 done
             - publish: |
@@ -19,10 +19,10 @@ jobs:
                 if [ ! -z $SD_PULL_REQUEST ] ; then
                     tag="pr$SD_PULL_REQUEST"
                 else
-                    for cmd in $(ls -1 sd-cmd/*.sh)
+                    for cmd_filename in $(ls -1 sd-cmd/*.yaml)
                     do
                         echo -n "${cmd}: "
-                        sd-cmd publish -f "sd-cmd/${cmd}.yaml" -t $tag
+                        sd-cmd publish -f "${cmd_filename}" -t $tag
                         echo
                     done
                 fi
