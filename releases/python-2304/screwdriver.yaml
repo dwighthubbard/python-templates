@@ -32,28 +32,24 @@ jobs:
         steps:
             - validate: |
                 mkdir -p $SD_ARTIFACTS_DIR/logs/sd-cmd-validate
-                for cmd in $(ls -1 sd-cmd/*.sh)
+                for cmd in $(ls -1 sd-cmd/*.yaml|cut -d/ -f2|cut -d. -f1)
                 do
-                    echo "validate ${cmd}: "
+                    echo "validate python-2304/${cmd}: "
                     sd-cmd exec python-2304/${cmd}@pre > $SD_ARTIFACTS_DIR/logs/sd-cmd-validate/${cmd}.log 2>&1
                     echo
                 done
                 sd-cmd exec python-2304/pypirun@pre serviceping serviceping --help
-                sd-cmd exec python-2304/remoterun@pre https://edge.dist.yahoo.com:4443/artifactory/bootstrap/motd/motd-0.0.25508114
             - promote: |
-                for cmd in $(ls -1 sd-cmd/*.sh)
+                for cmd in $(ls -1 sd-cmd/*.yaml|cut -d/ -f2|cut -d. -f1)
                 do
                     echo "promote ${cmd}: "
                     sd-cmd publish -f "sd-cmd/${cmd}.yaml" -t latest
                     sd-cmd publish -f "sd-cmd/${cmd}.yaml" -t stable
-                    # sd-cmd promote python-2304/${cmd} pre latest
-                    # sd-cmd promote python-2304/${cmd} pre stable
                   echo
                 done
         requires: [publish_cmd]
 
     publish_base_template:
-        image: almalinux:8
         environment:
             PYTHON_BOOTSTRAP_SKIP_PYPIRUN: True
             PYTHON_BOOTSTRAP_SKIP_SCREWDRIVERCD: False
